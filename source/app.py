@@ -77,7 +77,9 @@ if __name__ == "__main__":
         if (time.time() - last_run) > interval_sec:
             last_run = time.time()
             indexing_stat = index_data(history_files_count)
-            logger.info("Indexed %d documents", indexing_stat['index'])
+            success_count, failed_count = indexing_stat[0], indexing_stat[1]
+            logger.info(f"Indexed {success_count} documents to Elasticsearch")
+            logger.info(f"Failed to index {failed_count} documents to Elasticsearch")
         else:
             time.sleep(interval_sec)
 
