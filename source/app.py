@@ -16,15 +16,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Set up Elasticsearch
-es = Elasticsearch("http://localhost:9200/")
+es = Elasticsearch("http://192.168.2.161:9200/")
 
 files_path = '/run/dump1090-fa/'
+# files_path = 'C:\\temp\\'
 
 def read_json_file(file_path):
     # read the data from the file
     with open(file_path) as f:
         data = json.load(f)
     return data
+
+def read_aircraft_file(file_path):
+    # read the data from the file
+    with open(file_path, 'r') as f:
+        data = read_json_file(file_path)
+        aircrafts = data['aircraft']
+    return aircrafts
 
 def read_history_files(files_path, history_files_count):
     # read the data from the history files
@@ -44,14 +52,12 @@ def read_history_files(files_path, history_files_count):
         aircrafts.extend(doc['aircraft'])
     return aircrafts
 
-def index_data(history_files_count):
-    aircrafts_data = read_history_files(files_path, history_files_count)
-
+def index_aircraft_data(aircraft_data):
     # map fields for elasticsearch
     # add _index key to each document
     # add _id key to each document
     actions = []
-    for doc in aircrafts_data:
+    for doc in aircraft_data:
         action = {
             "_index": "aircraft",
             "_source": doc
@@ -62,27 +68,29 @@ def index_data(history_files_count):
     indexing_stat = es_helpers.bulk(es, actions, stats_only=True)
     return indexing_stat
 
-# main loop
+# main
 if __name__ == "__main__":
     # on startup, load receiver.json file
     # set interval per "refresh" key
 
     receiver_file_content = read_json_file(files_path + 'receiver.json')
-
     interval_sec = receiver_file_content["refresh"] / 1000
+
+    # index history files to Elasticsearch
     history_files_count = receiver_file_content["history"]
+    history_data = read_history_files(files_path, history_files_count)
+    indexing_stat = index_aircraft_data(history_data)
 
-    last_run = time.time() - interval_sec
+    last_run = time.time()
+    aircraft_file_path = files_path + 'aircraft.json'
+
     while True:
-        if (time.time() - last_run) > interval_sec:
-            last_run = time.time()
-            indexing_stat = index_data(history_files_count)
-            success_count, failed_count = indexing_stat[0], indexing_stat[1]
-            logger.info(f"Indexed {success_count} documents to Elasticsearch")
-            logger.info(f"Failed to index {failed_count} documents to Elasticsearch")
-        else:
-            time.sleep(interval_sec)
-
+        # read the data from the file
+        aircrafts_data = read_aircraft_file(aircraft_file_path)
+        success_count, failed_count = index_aircraft_data(aircrafts_data)
+        logger.info(f"Indexed {success_count} documents to Elasticsearch")
+        logger.info(f"Failed to index {failed_count} documents to Elasticsearch")
+        time.sleep(interval_sec)
     # Close the Elasticsearch connection
     es.close()
 
