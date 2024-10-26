@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Set up Elasticsearch
 es = Elasticsearch("http://192.168.2.161:9200/")
 
+index_name = "aircraft_data"
 files_path = '/run/dump1090-fa/'
 # files_path = 'C:\\temp\\'
 
@@ -59,7 +60,7 @@ def index_aircraft_data(aircraft_data):
     actions = []
     for doc in aircraft_data:
         action = {
-            "_index": "aircraft",
+            "_index": index_name,
             "_source": doc
         }
         actions.append(action)
