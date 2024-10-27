@@ -33,6 +33,14 @@ def read_aircraft_file(file_path):
     with open(file_path, 'r') as f:
         data = read_json_file(file_path)
         aircrafts = data['aircraft']
+    
+    # map lon and lat to GeoJSON with type and coordinates
+    for aircraft in aircrafts:
+        if 'lon' in aircraft and 'lat' in aircraft:
+            aircraft['location'] = {
+                "type": "Point",
+                "coordinates": [aircraft['lon'], aircraft['lat']]
+            }
     return aircrafts
 
 def read_history_files(files_path, history_files_count):
@@ -57,11 +65,14 @@ def index_aircraft_data(aircraft_data):
     # map fields for elasticsearch
     # add _index key to each document
     # add _id key to each document
+    # add timestamp key to each document
+    timestamp = int(time.time())
     actions = []
     for doc in aircraft_data:
         action = {
             "_index": index_name,
-            "_source": doc
+            "_source": doc,
+            "_created_at": timestamp
         }
         actions.append(action)
 
