@@ -33,7 +33,8 @@ def read_aircraft_file(file_path):
         aircrafts = data['aircraft']
     
     # map lon and lat to GeoJSON with type and coordinates
-    timestamp = int(time.time())
+    # get UTC timestamp
+    timestamp = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime())
     for aircraft in aircrafts:
         aircraft['created_at'] = timestamp
         if 'lon' in aircraft and 'lat' in aircraft:
