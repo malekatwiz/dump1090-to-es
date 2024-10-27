@@ -4,9 +4,7 @@
 # Uses instructions provided on this page [](https://github.com/flightaware/dump1090/blob/master/README-json.md#history_0json-history_1json--history_119json)
 
 import json
-import requests
 import time
-import os
 import logging
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers as es_helpers
@@ -35,7 +33,9 @@ def read_aircraft_file(file_path):
         aircrafts = data['aircraft']
     
     # map lon and lat to GeoJSON with type and coordinates
+    timestamp = int(time.time())
     for aircraft in aircrafts:
+        aircraft['created_at'] = timestamp
         if 'lon' in aircraft and 'lat' in aircraft:
             aircraft['location'] = {
                 "type": "Point",
@@ -65,14 +65,11 @@ def index_aircraft_data(aircraft_data):
     # map fields for elasticsearch
     # add _index key to each document
     # add _id key to each document
-    # add timestamp key to each document
-    timestamp = int(time.time())
     actions = []
     for doc in aircraft_data:
         action = {
             "_index": index_name,
-            "_source": doc,
-            "_created_at": timestamp
+            "_source": doc
         }
         actions.append(action)
 
