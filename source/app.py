@@ -4,6 +4,8 @@
 # Uses instructions provided on this page [](https://github.com/flightaware/dump1090/blob/master/README-json.md#history_0json-history_1json--history_119json)
 
 import json
+from datetime import datetime
+import os
 import time
 import logging
 from elasticsearch import Elasticsearch
@@ -14,11 +16,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Set up Elasticsearch
-es = Elasticsearch("http://192.168.2.161:9200/")
+elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200/")
 
-index_name = "aircraft_data"
-files_path = '/run/dump1090-fa/'
-# files_path = 'C:\\temp\\'
+# TODO: better handle es_client instance
+es = Elasticsearch(elasticsearch_url)
+
+check_interval_sec = os.getenv("CHECK_INTERVAL_SEC", 1)
+index_name = os.getenv("ELASTICSEARCH_INDEX", "aircraft_data")
+json_dump_files_path = os.getenv("JSON_DUMP_FILES_PATH", "/run/dump1090-fa/")
+backfill_on_startup = os.getenv("BACKFILL_ON_STARTUP", "false")
+aircraft_file_path = json_dump_files_path + 'aircraft.json'
 
 def read_json_file(file_path):
     # read the data from the file
@@ -34,7 +41,7 @@ def read_aircraft_file(file_path):
     
     # map lon and lat to GeoJSON with type and coordinates
     # get UTC timestamp
-    timestamp = time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime())
+    timestamp = datetime.now().timestamp()
     for aircraft in aircrafts:
         aircraft['created_at'] = timestamp
         if 'lon' in aircraft and 'lat' in aircraft:
@@ -75,24 +82,29 @@ def index_aircraft_data(aircraft_data):
         actions.append(action)
 
     # index to elasticsearch
-    indexing_stat = es_helpers.bulk(es, actions, stats_only=True)
+    try:
+        indexing_stat = es_helpers.bulk(es, actions)
+    except Exception as e:
+        logger.error(f"Failed to index data to Elasticsearch: {e}")
+        return 0, len(aircraft_data)
     return indexing_stat
 
 # main
 if __name__ == "__main__":
-    # on startup, load receiver.json file
-    # set interval per "refresh" key
+    if not es.ping():
+        logger.error("Cannot connect to Elasticsearch")
+        exit(1)
 
-    receiver_file_content = read_json_file(files_path + 'receiver.json')
-    interval_sec = receiver_file_content["refresh"] / 1000
+    if backfill_on_startup:
+        logger.info("Running backfill on startup")
 
-    # index history files to Elasticsearch
-    history_files_count = receiver_file_content["history"]
-    history_data = read_history_files(files_path, history_files_count)
-    indexing_stat = index_aircraft_data(history_data)
+        # on startup, load receiver.json file
+        receiver_file_content = read_json_file(json_dump_files_path + 'receiver.json')
 
-    last_run = time.time()
-    aircraft_file_path = files_path + 'aircraft.json'
+        # index history files to Elasticsearch
+        history_files_count = receiver_file_content["history"]
+        history_data = read_history_files(json_dump_files_path, history_files_count)
+        indexing_stat = index_aircraft_data(history_data)
 
     while True:
         # read the data from the file
@@ -100,7 +112,7 @@ if __name__ == "__main__":
         success_count, failed_count = index_aircraft_data(aircrafts_data)
         logger.info(f"Indexed {success_count} documents to Elasticsearch")
         logger.info(f"Failed to index {failed_count} documents to Elasticsearch")
-        time.sleep(interval_sec)
+        time.sleep(check_interval_sec)
     # Close the Elasticsearch connection
     es.close()
 
