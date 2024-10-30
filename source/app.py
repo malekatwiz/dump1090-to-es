@@ -43,7 +43,7 @@ def read_aircraft_file(file_path):
     # get UTC timestamp
     timestamp = datetime.now().timestamp()
     for aircraft in aircrafts:
-        aircraft['created_at'] = timestamp
+        aircraft['created_on'] = timestamp
         if 'lon' in aircraft and 'lat' in aircraft:
             aircraft['location'] = {
                 "type": "Point",
