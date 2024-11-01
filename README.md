@@ -17,6 +17,8 @@ thanks to the comprehensive work [flightaware dump1090](https://github.com/fligh
 ## How I used it
 I used it to collect data from dump1090 and visualize it on Kibana, I created a dashboard that shows the number of aircrafts in the air, the number of aircrafts per country, and the number of aircrafts per altitude.
 
+### Transforming the data
+
 
 
 ## thanks to creators and maintainers of
