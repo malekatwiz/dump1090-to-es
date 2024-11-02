@@ -10,6 +10,7 @@ import time
 import logging
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers as es_helpers
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +27,9 @@ index_name = os.getenv("ELASTICSEARCH_INDEX", "aircraft_data")
 json_dump_files_path = os.getenv("JSON_DUMP_FILES_PATH", "/run/dump1090-fa/")
 backfill_on_startup = os.getenv("BACKFILL_ON_STARTUP", "false")
 aircraft_file_path = json_dump_files_path + 'aircraft.json'
+hostname = os.getenv("HOSTNAME", "node_1")
+dump_rest_api = os.getenv("DUMP_API_GET", "http://localhost:8080/data.json")
+use_rest_api = os.getenv("USE_DUMP_REST_API", "false")
 
 def read_json_file(file_path):
     # read the data from the file
@@ -44,6 +48,7 @@ def read_aircraft_file(file_path):
     timestamp = datetime.now().timestamp()
     for aircraft in aircrafts:
         aircraft['created_on'] = timestamp
+        aircraft['created_by'] = hostname
         if 'lon' in aircraft and 'lat' in aircraft:
             aircraft['location'] = {
                 "type": "Point",
@@ -51,23 +56,31 @@ def read_aircraft_file(file_path):
             }
     return aircrafts
 
-def read_history_files(files_path, history_files_count):
-    # read the data from the history files
-    history_files = []
-    for i in range(history_files_count):
-        file_path = files_path + 'history_' + str(i) + '.json'
-        with open(file_path) as f:
-            data = json.load(f)
-            history_files.append(data)
-
-    # sort history files by 'now' key
-    history_files.sort(key=lambda x: x['now'])
-
-    # extract 'aircraft[]' from each document
-    aircrafts = []
-    for doc in history_files:
-        aircrafts.extend(doc['aircraft'])
-    return aircrafts
+def read_aircrafts_rest_api():
+    try:
+        response = requests.get(dump_rest_api)
+        response.raise_for_status()
+        data = response.json()
+        
+        if data is None or len(data) == 0:
+            logger.warning("No data returned from API")
+            return []
+        
+        # map lon and lat to GeoJSON with type and coordinates
+        # get UTC timestamp
+        timestamp = datetime.now().timestamp()
+        for aircraft in data:
+            aircraft['created_on'] = timestamp
+            aircraft['created_by'] = hostname
+            if 'lon' in aircraft and 'lat' in aircraft:
+                aircraft['location'] = {
+                    "type": "Point",
+                    "coordinates": [aircraft['lon'], aircraft['lat']]
+                }
+        return data
+    except requests.RequestException as e:
+        logger.error(f"Failed to fetch data from API: {e}")
+        return []
 
 def index_aircraft_data(aircraft_data):
     # map fields for elasticsearch
@@ -94,24 +107,20 @@ if __name__ == "__main__":
     if not es.ping():
         logger.error("Cannot connect to Elasticsearch")
         exit(1)
-
-    if backfill_on_startup:
-        logger.info("Running backfill on startup")
-
-        # on startup, load receiver.json file
-        receiver_file_content = read_json_file(json_dump_files_path + 'receiver.json')
-
-        # index history files to Elasticsearch
-        history_files_count = receiver_file_content["history"]
-        history_data = read_history_files(json_dump_files_path, history_files_count)
-        indexing_stat = index_aircraft_data(history_data)
-
+        
+    aircrafts_data = []
     while True:
-        # read the data from the file
-        aircrafts_data = read_aircraft_file(aircraft_file_path)
-        success_count, failed_count = index_aircraft_data(aircrafts_data)
-        logger.info(f"Indexed {success_count} documents to Elasticsearch")
-        logger.info(f"Failed to index {failed_count} documents to Elasticsearch")
+        if use_rest_api == "true":
+            aircrafts_data = read_aircrafts_rest_api()
+        else:
+            # read the data from the file
+            aircrafts_data = read_aircraft_file(aircraft_file_path)
+        
+        success_count, failed_count = index_aircraft_data(aircrafts_data)        
+        if (failed_count > 0):
+            logger.warning(f"Failed to index {failed_count} documents to Elasticsearch")
+        else:
+            logger.info(f"Indexed {success_count} documents to Elasticsearch")
         time.sleep(check_interval_sec)
     # Close the Elasticsearch connection
     es.close()
