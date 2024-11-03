@@ -115,12 +115,12 @@ if __name__ == "__main__":
         else:
             # read the data from the file
             aircrafts_data = read_aircraft_file(aircraft_file_path)
-        
-        success_count, failed_count = index_aircraft_data(aircrafts_data)        
-        if (failed_count > 0):
-            logger.warning(f"Failed to index {failed_count} documents to Elasticsearch")
-        else:
-            logger.info(f"Indexed {success_count} documents to Elasticsearch")
+        if (len(aircrafts_data) > 0):
+            success_count, failed_count = index_aircraft_data(aircrafts_data)
+            if (failed_count > 0):
+                logger.warning(f"Failed to index {failed_count} documents to Elasticsearch")
+            else:
+                logger.info(f"Indexed {success_count} documents to Elasticsearch")
         time.sleep(check_interval_sec)
     # Close the Elasticsearch connection
     es.close()
