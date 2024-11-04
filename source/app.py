@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Set up Elasticsearch
-elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200/")
+elasticsearch_url = os.getenv("ELASTICSEARCH_URL", "http://192.168.2.23:9200/")
 
 # TODO: better handle es_client instance
 es = Elasticsearch(elasticsearch_url)
@@ -29,7 +29,17 @@ backfill_on_startup = os.getenv("BACKFILL_ON_STARTUP", "false")
 aircraft_file_path = json_dump_files_path + 'aircraft.json'
 hostname = os.getenv("HOSTNAME", "node_1")
 dump_rest_api = os.getenv("DUMP_API_GET", "http://localhost:8080/data.json")
-use_rest_api = os.getenv("USE_DUMP_REST_API", "false")
+use_rest_api = os.getenv("USE_DUMP_REST_API", "true")
+
+# print the configuration
+logger.info(f"ELASTICSEARCH_URL: {elasticsearch_url}")
+logger.info(f"CHECK_INTERVAL_SEC: {check_interval_sec}")
+logger.info(f"ELASTICSEARCH_INDEX: {index_name}")
+logger.info(f"JSON_DUMP_FILES_PATH: {json_dump_files_path}")
+logger.info(f"BACKFILL_ON_STARTUP: {backfill_on_startup}")
+logger.info(f"HOSTNAME: {hostname}")
+logger.info(f"DUMP_API_GET: {dump_rest_api}")
+logger.info(f"USE_DUMP_REST_API: {use_rest_api}")
 
 def read_json_file(file_path):
     # read the data from the file
@@ -100,7 +110,7 @@ def index_aircraft_data(aircraft_data):
     except Exception as e:
         logger.error(f"Failed to index data to Elasticsearch: {e}")
         return 0, len(aircraft_data)
-    return indexing_stat
+    return indexing_stat[0], indexing_stat[1]
 
 # main
 if __name__ == "__main__":
@@ -115,7 +125,8 @@ if __name__ == "__main__":
         else:
             # read the data from the file
             aircrafts_data = read_aircraft_file(aircraft_file_path)
-        if (len(aircrafts_data) > 0):
+        
+        if len(aircrafts_data) > 0:
             success_count, failed_count = index_aircraft_data(aircrafts_data)
             if (failed_count > 0):
                 logger.warning(f"Failed to index {failed_count} documents to Elasticsearch")
