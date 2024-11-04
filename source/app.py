@@ -72,7 +72,7 @@ def read_aircrafts_rest_api():
         response.raise_for_status()
         data = response.json()
         
-        if data is None or len(data) == 0:
+        if not data:
             logger.warning("No data returned from API")
             return []
         
