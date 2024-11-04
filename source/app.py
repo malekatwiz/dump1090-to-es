@@ -106,7 +106,7 @@ def index_aircraft_data(aircraft_data):
 
     # index to elasticsearch
     try:
-        indexing_stat = es_helpers.bulk(es, actions)
+        indexing_stat = es_helpers.bulk(es, actions, stats_only=True)
     except Exception as e:
         logger.error(f"Failed to index data to Elasticsearch: {e}")
         return 0, len(aircraft_data)
