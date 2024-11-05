@@ -19,6 +19,10 @@ I used it to collect data from dump1090 and visualize it on Kibana, I created a 
 
 ### Transforming the data
 
+### Enriching the data with Airlines information
+
+Using Elasticsearch to enrich the data by matching the airline ICAO code, imported data from [OpenFlights](https://openflights.org/data.php#airline)
+See script provided [airlines_es_seeder.py](scripts/airlines_es_seeder.py)
 
 
 ## thanks to creators and maintainers of
