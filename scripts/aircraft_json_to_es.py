@@ -110,8 +110,9 @@ def index_aircraft_data(file_path, index_name, es_url, device_name, mappings_fil
     print("Indexing complete.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: python aircraft_json_to_es.py <file_path> <index_name> <es_url>")
+    if len(sys.argv) != 6:
+        print("Usage: python aircraft_json_to_es.py <file_path> <index_name> <es_url> <mappings_file> <device_name>")
+        sys.exit(1)
     else:
         file_path = sys.argv[1]
         index_name = sys.argv[2]
