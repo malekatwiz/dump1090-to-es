@@ -7,7 +7,7 @@ import sys
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-def index_aircraft_data(file_path, index_name, es_url):
+def index_aircraft_data(file_path, index_name, es_url, device_name):
     # Initialize the Elasticsearch client
     es = Elasticsearch(es_url)
     
@@ -114,6 +114,7 @@ def index_aircraft_data(file_path, index_name, es_url):
                             "messages": messages,
                             "sil": sil,
                             "sil_type": sil_type,
+                            "captured_by": device_name
                         }
                     })
     
@@ -126,16 +127,18 @@ def index_aircraft_data(file_path, index_name, es_url):
         bulk(es, actions)
     except Exception as e:
         print(f"An error occurred while indexing data: {e}")
-        for error in e.errors:
-            print(f"Error: {error}")
         sys.exit(1)
     print("Indexing complete.")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) < 4:
         print("Usage: python aircraft_json_to_es.py <file_path> <index_name> <es_url>")
     else:
         file_path = sys.argv[1]
         index_name = sys.argv[2]
         es_url = sys.argv[3]
-        index_aircraft_data(file_path, index_name, es_url)
+        if len(sys.argv) == 5:
+            device_name = sys.argv[4]
+        else:
+            device_name = "Unknown"
+        index_aircraft_data(file_path, index_name, es_url, device_name)
