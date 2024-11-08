@@ -1,0 +1,87 @@
+{
+    "mappings": {
+        "properties": {
+            "hex": {
+                "type": "keyword"
+            },
+            "flight": {
+                "type": "keyword"
+            },
+            "alt_baro": {
+                "type": "integer"
+            },
+            "alt_geom": {
+                "type": "integer"
+            },
+            "gs": {
+                "type": "integer"
+            },
+            "track": {
+                "type": "integer"
+            },
+            "baro_rate": {
+                "type": "integer"
+            },
+            "squawk": {
+                "type": "keyword"
+            },
+            "emergency": {
+                "type": "keyword"
+            },
+            "category": {
+                "type": "keyword"
+            },
+            "timestamp": {
+                "type": "date"
+            },
+            "lat": {
+                "type": "float"
+            },
+            "lon": {
+                "type": "float"
+            },
+            "nic": {
+                "type": "float"
+            },
+            "rc": {
+                "type": "float"
+            },
+            "seen_pos": {
+                "type": "float"
+            },
+            "version": {
+                "type": "integer"
+            },
+            "nav_qnh": {
+                "type": "float"
+            },
+            "nav_altitude_mcp": {
+                "type": "integer"
+            },
+            "nav_heading": {
+                "type": "float"
+            },
+            "lat_lon": {
+                "type": "geo_point"
+            },
+            "nav_modes": {
+                "type": "text"
+            },
+            "rssi": {
+                "type": "float"
+            },
+            "messages": {
+                "type": "integer"
+            },
+            "sil": {
+                "type": "integer"
+            },
+            "sil_type": {
+                "type": "text"
+            },
+            "captured_by": {
+                "type": "keyword"
+            }
+        }
+    }
+}

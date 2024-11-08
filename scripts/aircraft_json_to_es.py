@@ -7,44 +7,23 @@ import sys
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-def index_aircraft_data(file_path, index_name, es_url, device_name):
+def index_aircraft_data(file_path, index_name, es_url, device_name, mappings_file):
     # Initialize the Elasticsearch client
     es = Elasticsearch(es_url)
-    
+
+    # load elasticsearch index mappings from file in JSON format
+    with open(mappings_file, 'r', encoding='utf-8') as mapping_file:
+        index_mapping = json.load(mapping_file)
+
     # Ensure the index exists with the correct mapping (run this once)
-    if not es.indices.exists(index=index_name):
-        es.indices.create(index=index_name, body={
-            "mappings": {
-                "properties": {
-                    "hex": {"type": "keyword"},
-                    "flight": {"type": "keyword"},
-                    "alt_baro": {"type": "integer"},
-                    "alt_geom": {"type": "integer"},
-                    "gs": {"type": "integer"},
-                    "track": {"type": "integer"},
-                    "baro_rate": {"type": "integer"},
-                    "squawk": {"type": "keyword"},
-                    "emergency": {"type": "keyword"},
-                    "category": {"type": "keyword"},
-                    "timestamp": {"type": "date"},
-                    "lat": {"type": "float"},
-                    "lon": {"type": "float"},
-                    "nic": {"type": "float"},
-                    "rc": {"type": "float"},
-                    "seen_pos": {"type": "float"},
-                    "version": {"type": "integer"},
-                    "nav_qnh": {"type": "float"},
-                    "nav_altitude_mcp": {"type": "integer"},
-                    "nav_heading": {"type": "float"},
-                    "lat_lon": {"type": "geo_point"},
-                    "nav_modes": {"type": "text"},
-                    "rssi": {"type": "float"},
-                    "messages": {"type": "integer"},
-                    "sil": {"type": "integer"},
-                    "sil_type": {"type": "text"},
-                }
-            }
-        })
+    index_exists = es.indices.exists(index=index_name)
+    if index_exists:
+        current_mapping = es.indices.get_mapping(index=index_name)
+        if current_mapping[index_name]['mappings'] != index_mapping['mappings']:
+            es.indices.put_mapping(index=index_name, body=index_mapping['mappings'])
+    else:
+        es.indices.create(index=index_name, body=index_mapping)
+    
     
     # Read the file and prepare data for bulk indexing
     # JSON file contains a field "aircraft": []
@@ -137,8 +116,6 @@ if __name__ == "__main__":
         file_path = sys.argv[1]
         index_name = sys.argv[2]
         es_url = sys.argv[3]
-        if len(sys.argv) == 5:
-            device_name = sys.argv[4]
-        else:
-            device_name = "Unknown"
-        index_aircraft_data(file_path, index_name, es_url, device_name)
+        mappings_file = sys.argv[4]
+        device_name = sys.argv[5]
+        index_aircraft_data(file_path, index_name, es_url, device_name, mappings_file)
